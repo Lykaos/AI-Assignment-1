@@ -17,6 +17,10 @@ var gap_y;
 var unit_x;
 var unit_y;
 
+var	path = []; // Optimal path
+var acceleration;
+var vel;
+
 function init() {
 	canvas = document.getElementById('canvas');
 	ctx = canvas.getContext('2d');
@@ -26,6 +30,9 @@ function init() {
 	vertices = [];
 	obst_edges = [];
 	
+	start_vertex_ind = vertices.length;
+	vertices.push(map1.pos_start);
+
 	for (var i = 0; i < obstacles.length; i++) {
 		
 		prev_obst_vert = obstacles[i][obstacles[i].length - 1];
@@ -73,8 +80,7 @@ function init() {
 		prev_obst_vert = map1.bounding_polygon[i];
 	}
 	
-	start_vertex_ind = vertices.length;
-	vertices.push(map1.pos_start);
+
 	goal_vertex_ind = vertices.length;
 	vertices.push(map1.pos_goal);
 	
@@ -121,6 +127,7 @@ function init() {
 	//ctx.fillText("Drawing test", 10, 50);
 	
 	drawMap();
+	dijkstra(adj_matrix);
 }
 
 function drawMap() {
@@ -166,7 +173,26 @@ function buildPathKinematic() {
 }
 
 function buildPathDynamic() {
-	alert('Build path under dynamic point model');
+// TODO: Implement this better when there is more than one node in the optimal path
+	if (path.length == 1) { // First week case
+		acceleration = map1.vehicle_a_max;
+		vel_max = map1.vehicle_v_max
+		time_max_a = vel_max / acceleration; // Time spent accelerating until max speed.
+		distance_while_accelerating = acceleration * Math.pow(time_max_a, 2) / 2; // Distance travelled while accelerating.		
+		total_distance = dist(vertices[vertices.length -1], vertices[0]);
+		remaining_distance = total_distance - distance_while_accelerating; // Distance travelled with max speed
+		if (remaining_distance > 0) {
+			acceleration = 0;
+		}
+		remaining_time = remaining_distance / vel_max;
+		total_time = time_max_a + remaining_time;
+		str1 = "Path completed in ";
+		$("#time_results").text(str1.concat((time_max_a + total_time).toFixed(4)).concat(" s"));
+		str2 = "Arriving with velocity ";
+		$("#velocity_results").text(str2.concat(vel_max.toFixed(2)).concat(" units/s"));
+		str3 = "Arriving with acceleration ";
+		$("#acceleration_results").text(str3.concat(acceleration.toFixed(2)).concat(" units/s2"));
+	}
 }
 
 function buildPathDD() {
@@ -199,3 +225,38 @@ function translatePoint(p) {
 	y = canvas.height-(gap_y + (p[1]-min_y) * unit_y);
 	return [x,y];
 }
+
+function dijkstra(adj_matrix) {
+	/* TODO: Fix this algorithm. We can use Dmitry's.
+	var unvisited_nodes = [];
+	var node_weights = []; // First element is the starting node, last element is the final node.
+	var node_paths = [];
+	var best_path = [];
+
+	for (i = 1; i < vertices.length; i++) {
+		unvisited_nodes.push(i);
+		node_weights.push(Number.MAX_VALUE);
+		node_paths.push([0]);
+	}
+
+	node_weights[0] = 0; // The starting node has weight 0.
+
+	for (i = 0; i < vertices.length; i++) {
+		for (j = 0; j < unvisited_nodes.length; j++) {
+			if (node_weights[unvisited_nodes[j]] > node_weights[i] + adj_matrix[i][unvisited_nodes[j]]) {
+				node_weights[unvisited_nodes[j]] = node_weights[i] + adj_matrix[i][unvisited_nodes[j]];
+				node_paths[unvisited_nodes[j]].push(i);
+			}
+		}
+		unvisited_nodes.shift();
+
+	} 
+	return node_paths; */
+
+	// No obstacles scenario
+	path.push(vertices.length);
+	return path;
+}
+
+
+
