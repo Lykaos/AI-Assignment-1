@@ -230,24 +230,45 @@ function buildPathKinematic() {
 	}
 	ctx.stroke();
 	ctx.font = "15px Arial";
-	ctx.fillText("Traveling time: " + t, 10, 20);
+	//ctx.fillText("Traveling time: " + t, 10, 20);
 	ctx.restore();
+	str1 = "Path completed in ";
+	$("#time_results").text(str1.concat((t).toFixed(4)).concat(" s"));
+	str2 = "Arriving with velocity ";
+	$("#velocity_results").text(str2.concat(map1.vehicle_v_max.toFixed(2)).concat(" units/s"));
+	str3 = "Arriving with acceleration ";
+	$("#acceleration_results").text(str3.concat((0).toFixed(2)).concat(" units/s2"));
 }
 
 function buildPathDynamic() {
-// TODO: Implement this better when there is more than one node in the optimal path
+	prev_point = vertices[start_vertex_ind];
+	drawMap();
+	ctx.save();	
+	var shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
+	path = constructPath(shortestPathInfo, goal_vertex_ind);
+	firstPoint = translatePoint(vertices[start_vertex_ind]);
+	ctx.strokeStyle = "#228B22";
+	ctx.moveTo(firstPoint[0], firstPoint[1]);
+
+	// TODO: Implement this better when there is more than one node in the optimal path
 	if (path.length == 1) { // First week case
+		v = translatePoint(vertices[path[0]]);
+		ctx.lineTo(v[0], v[1]);
 		acceleration = map1.vehicle_a_max;
 		vel_max = map1.vehicle_v_max
 		time_max_a = vel_max / acceleration; // Time spent accelerating until max speed.
 		distance_while_accelerating = acceleration * Math.pow(time_max_a, 2) / 2; // Distance travelled while accelerating.		
-		total_distance = dist(vertices[vertices.length -1], vertices[0]);
+		total_distance = dist(vertices[vertices.length -1], prev_point);
 		remaining_distance = total_distance - distance_while_accelerating; // Distance travelled with max speed
 		if (remaining_distance > 0) {
 			acceleration = 0;
 		}
 		remaining_time = remaining_distance / vel_max;
 		total_time = time_max_a + remaining_time;
+		ctx.stroke();
+		ctx.font = "15px Arial";
+		//ctx.fillText("Traveling time: " + t, 10, 20);
+		ctx.restore();
 		str1 = "Path completed in ";
 		$("#time_results").text(str1.concat((time_max_a + total_time).toFixed(4)).concat(" s"));
 		str2 = "Arriving with velocity ";
@@ -258,7 +279,38 @@ function buildPathDynamic() {
 }
 
 function buildPathDD() {
-	alert('Build path under differential drive model');
+	prev_point = vertices[start_vertex_ind];
+	drawMap();
+	ctx.save();	
+	var shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
+	path = constructPath(shortestPathInfo, goal_vertex_ind);
+	firstPoint = translatePoint(vertices[start_vertex_ind]);
+	ctx.strokeStyle = "#228B22";
+	ctx.moveTo(firstPoint[0], firstPoint[1]);
+	// TODO: Implement this better when there is more than one node in the optimal path
+	if (path.length == 1) { // First week case
+		v = translatePoint(vertices[path[0]]);
+		ctx.lineTo(v[0], v[1]);
+		vel_max = map1.vehicle_v_max;
+		acceleration = 0;
+		total_distance = dist(vertices[vertices.length -1], prev_point);
+		v1 = vertices[0];
+		v2 = vertices[vertices.length - 1];
+		radians_to_rotate = Math.atan(v2[1]-v1[1]/v2[0]/v1[0]);
+		rotation_time = radians_to_rotate / map1.vehicle_phi_max;
+		remaining_time = total_distance / vel_max;
+		total_time = rotation_time + remaining_time;
+		ctx.stroke();
+		ctx.font = "15px Arial";
+		//ctx.fillText("Traveling time: " + t, 10, 20);
+		ctx.restore();
+		str1 = "Path completed in ";
+		$("#time_results").text(str1.concat((total_time).toFixed(4)).concat(" s"));
+		str2 = "Arriving with velocity ";
+		$("#velocity_results").text(str2.concat(vel_max.toFixed(2)).concat(" units/s"));
+		str3 = "Arriving with acceleration ";
+		$("#acceleration_results").text(str3.concat(acceleration.toFixed(2)).concat(" units/s2"));
+	}
 }
 
 function buildPathKC() {
