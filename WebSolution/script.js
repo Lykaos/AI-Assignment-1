@@ -41,10 +41,9 @@ function initMap(newMap) {
 		}
 		obstacles.push(val);
 	}
-	//obstacles = [ map.obstacle_1, map.obstacle_2, map.obstacle_3, map.obstacle_4, map.obstacle_5 ];
 	vertices = [];
 	obst_edges = [];
-	
+	eps = 1e-3;
 	for (var i = 0; i < obstacles.length; i++) {
 		
 		prev_obst_vert = obstacles[i][obstacles[i].length - 1];
@@ -64,7 +63,36 @@ function initMap(newMap) {
 			if (y > max_y) {
 				max_y = y;
 			}
-			vertices.push(obstacles[i][j]);
+			
+			v = [obstacles[i][j][0], obstacles[i][j][1]];
+			//nextInd = j % obstacles[i].length;
+			//next_obs_vert = obstacles[i][nextInd];
+			// Adding some margin to avoid collisions
+			//if (prev_obst_vert[0] > v[0]) {
+			//	v[0] -= eps;
+			//} else {
+			//	v[0] += eps;
+			//}
+			//if (prev_obst_vert[1] > v[1]) {
+			//	v[1] -= eps;
+			//} else {
+			//	v[1] += eps;
+			//}
+			
+			//if (next_obs_vert[0] > v[0]) {
+			//	v[0] -= eps;
+			//} else {
+			//	v[0] += eps;
+			//}
+			//if (next_obs_vert[1] > v[1]) {
+			//	v[1] -= eps;
+			//} else {
+			//	v[1] += eps;
+			//}
+			for (var k = 0; k < 7; k++) {
+				vertices.push([v[0]+sampleGaussian(0, 1e-3), v[1]+sampleGaussian(0, 1e-3)]);
+			}
+			
 			obst_edges.push([prev_obst_vert, obstacles[i][j]]);
 			prev_obst_vert = obstacles[i][j];
 		}
@@ -87,7 +115,7 @@ function initMap(newMap) {
 		if (y > max_y) {
 			max_y = y;
 		}
-		vertices.push(map.bounding_polygon[i]);
+		//vertices.push(map.bounding_polygon[i]);
 		obst_edges.push([prev_obst_vert, map.bounding_polygon[i]]);
 		prev_obst_vert = map.bounding_polygon[i];
 	}
@@ -122,6 +150,11 @@ function initMap(newMap) {
 			v2 = vertices[j];
 			visible = true;
 			for (var k = 0; k < obst_edges.length; k++) {
+				//if (v1 == obst_edges[k][0] && v2 == obst_edges[k][1] || 
+				//	v1 == obst_edges[k][1] && v2 == obst_edges[k][0]) {
+				//		visible = true;
+				//		break;
+				//	}
 				if (segmentsIntersect(v1, v2, obst_edges[k][0], obst_edges[k][1])) {
 					visible = false;
 					break;
@@ -216,8 +249,20 @@ function buildPathKinematic() {
 	
 	var shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
 	path = constructPath(shortestPathInfo, goal_vertex_ind);
+	for (var i = 0; i < 10 && path == undefined; i++) {
+		initMap(map);
+		shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
+		path = constructPath(shortestPathInfo, goal_vertex_ind);
+	}
+	
+	if (path == undefined) {
+		alert("No path found. Try again?")
+		return;
+	}
+	
 	//TODO: check for Nan
 	firstPoint = translatePoint(vertices[start_vertex_ind]);
+	ctx.lineWidth = 2;
 	ctx.strokeStyle = "#228B22";
 	ctx.moveTo(firstPoint[0], firstPoint[1]);
 	prev_point = vertices[start_vertex_ind];
@@ -233,11 +278,11 @@ function buildPathKinematic() {
 	//ctx.fillText("Traveling time: " + t, 10, 20);
 	ctx.restore();
 	str1 = "Path completed in ";
-	$("#time_results").text(str1.concat((t).toFixed(4)).concat(" s"));
+	$("#time_results").text(str1.concat((t).toFixed(4)));
 	str2 = "Arriving with velocity ";
-	$("#velocity_results").text(str2.concat(map1.vehicle_v_max.toFixed(2)).concat(" units/s"));
+	$("#velocity_results").text(str2.concat(map1.vehicle_v_max.toFixed(2)));
 	str3 = "Arriving with acceleration ";
-	$("#acceleration_results").text(str3.concat((0).toFixed(2)).concat(" units/s2"));
+	$("#acceleration_results").text(str3.concat((0).toFixed(2)));
 }
 
 function buildPathDynamic() {
@@ -248,6 +293,7 @@ function buildPathDynamic() {
 	path = constructPath(shortestPathInfo, goal_vertex_ind);
 	firstPoint = translatePoint(vertices[start_vertex_ind]);
 	ctx.strokeStyle = "#228B22";
+	ctx.lineWidth = 2;
 	ctx.moveTo(firstPoint[0], firstPoint[1]);
 
 	// TODO: Implement this better when there is more than one node in the optimal path
@@ -268,7 +314,6 @@ function buildPathDynamic() {
 		ctx.stroke();
 		ctx.font = "15px Arial";
 		//ctx.fillText("Traveling time: " + t, 10, 20);
-		ctx.restore();
 		str1 = "Path completed in ";
 		$("#time_results").text(str1.concat((time_max_a + total_time).toFixed(4)).concat(" s"));
 		str2 = "Arriving with velocity ";
@@ -276,6 +321,7 @@ function buildPathDynamic() {
 		str3 = "Arriving with acceleration ";
 		$("#acceleration_results").text(str3.concat(acceleration.toFixed(2)).concat(" units/s2"));
 	}
+	ctx.restore();
 }
 
 function buildPathDD() {
@@ -303,7 +349,6 @@ function buildPathDD() {
 		ctx.stroke();
 		ctx.font = "15px Arial";
 		//ctx.fillText("Traveling time: " + t, 10, 20);
-		ctx.restore();
 		str1 = "Path completed in ";
 		$("#time_results").text(str1.concat((total_time).toFixed(4)).concat(" s"));
 		str2 = "Arriving with velocity ";
@@ -311,6 +356,7 @@ function buildPathDD() {
 		str3 = "Arriving with acceleration ";
 		$("#acceleration_results").text(str3.concat(acceleration.toFixed(2)).concat(" units/s2"));
 	}
+	ctx.restore();
 }
 
 function buildPathKC() {
@@ -325,7 +371,7 @@ function segmentsIntersect(p0, p1, p2, p3) {
     s2_y = p3_y - p2_y;
     s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
     t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
-    return s > 0 && s < 1 && t > 0 && t < 1;
+    return s >= 0 && s <= 1 && t >= 0 && t <= 1;
 }
 
 // Euclidian distance between two points
@@ -379,7 +425,17 @@ function constructPath(shortestPathInfo, endVertex) {
 	var path = [];
 	while (endVertex != shortestPathInfo.startVertex) {
 		path.unshift(endVertex);
+		if (shortestPathInfo.pathLengths[endVertex] == Number.MAX_VALUE) {
+			return undefined;
+		}
 		endVertex = shortestPathInfo.predecessors[endVertex];
 	}
 	return path;
+}
+
+function sampleGaussian(mean, sd) {
+    u1 = Math.random();
+	u2 = Math.random();
+	z0 = Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);
+	return mean + z0*sd;
 }
