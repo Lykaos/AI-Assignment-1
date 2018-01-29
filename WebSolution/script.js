@@ -34,7 +34,7 @@ function init() {
 function initMap(newMap) {
 	map = newMap;
 	obstacles = [];
-	for (var i = 1; i < 11; i++) {
+	for (var i = 1; i < 100; i++) {
 		val = map["obstacle_"+i];
 		if (val == undefined) {
 			break;
@@ -43,7 +43,6 @@ function initMap(newMap) {
 	}
 	vertices = [];
 	obst_edges = [];
-	eps = 1e-3;
 	for (var i = 0; i < obstacles.length; i++) {
 		
 		prev_obst_vert = obstacles[i][obstacles[i].length - 1];
@@ -89,9 +88,14 @@ function initMap(newMap) {
 			//} else {
 			//	v[1] += eps;
 			//}
-			for (var k = 0; k < 7; k++) {
+
+			// ???
+			
+			/* for (var k = 0; k < 7; k++) {
 				vertices.push([v[0]+sampleGaussian(0, 1e-3), v[1]+sampleGaussian(0, 1e-3)]);
-			}
+			} */
+
+			vertices.push([v[0], v[1]]);
 			
 			obst_edges.push([prev_obst_vert, obstacles[i][j]]);
 			prev_obst_vert = obstacles[i][j];
@@ -136,38 +140,26 @@ function initMap(newMap) {
 	}
 	
 	adj_matrix = new Array(vertices.length);
-	for (var i = 0; i < vertices.length; i++) {
-		
+	for (var i = 0; i < vertices.length; i++) {		
 		v1 = vertices[i];
 		adj_matrix[i] = new Array(vertices.length);
-		for (var j = 0; j < vertices.length; j++) {
-			
+		for (var j = 0; j < vertices.length; j++) {		
 			if (i == j) {
 				adj_matrix[i][i] = 0;
 				continue;
 			}
-			
 			v2 = vertices[j];
-			visible = true;
 			for (var k = 0; k < obst_edges.length; k++) {
-				//if (v1 == obst_edges[k][0] && v2 == obst_edges[k][1] || 
-				//	v1 == obst_edges[k][1] && v2 == obst_edges[k][0]) {
-				//		visible = true;
-				//		break;
-				//	}
-				if (segmentsIntersect(v1, v2, obst_edges[k][0], obst_edges[k][1])) {
-					visible = false;
+				if (segmentsIntersect(v1[0], v1[1], v2[0], v2[1], obst_edges[k][0][0], obst_edges[k][0][1], obst_edges[k][1][0], obst_edges[k][1][1])) {
+					adj_matrix[i][j] = Number.MAX_VALUE;
 					break;
 				}
-			}
-			if (visible) {
-				adj_matrix[i][j] = dist(v1, v2);
-			} else {
-				adj_matrix[i][j] = Number.MAX_VALUE;
+				else {
+					adj_matrix[i][j] = dist(v1, v2);
+				}
 			}
 		}
 	}
-	
 	document.getElementById("info").innerHTML = 'v_max: '+map.vehicle_v_max+';  phi_max: '+map.vehicle_phi_max+';  omega_max: '+map.vehicle_omega_max+';  a_max: '+map.vehicle_a_max+';  L: '+map.vehicle_L;
 	
 	drawMap();
@@ -249,12 +241,15 @@ function buildPathKinematic() {
 	
 	var shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
 	path = constructPath(shortestPathInfo, goal_vertex_ind);
+
+	// What is this for?
 	for (var i = 0; i < 10 && path == undefined; i++) {
 		initMap(map);
 		shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
 		path = constructPath(shortestPathInfo, goal_vertex_ind);
-	}
+	} 
 	
+	// Won't happen
 	if (path == undefined) {
 		alert("No path found. Try again?")
 		return;
@@ -267,22 +262,20 @@ function buildPathKinematic() {
 	ctx.moveTo(firstPoint[0], firstPoint[1]);
 	prev_point = vertices[start_vertex_ind];
 	t = 0;
+	total = 0;
 	for (var i = 0; i < path.length; i++) {
 		v = translatePoint(vertices[path[i]]);
 		ctx.lineTo(v[0], v[1]);
-		t += (dist(prev_point, vertices[path[i]]))/map.vehicle_v_max;
-		prev_point = vertices[i];
+		t += dist(prev_point, vertices[path[i]])/map.vehicle_v_max;
+		total += dist(prev_point, vertices[path[i]]);
+		prev_point = vertices[path[i]];		
 	}
 	ctx.stroke();
 	ctx.font = "15px Arial";
 	//ctx.fillText("Traveling time: " + t, 10, 20);
 	ctx.restore();
-	str1 = "Path completed in ";
+	str1 = "Time: ";
 	$("#time_results").text(str1.concat((t).toFixed(4)));
-	str2 = "Arriving with velocity ";
-	$("#velocity_results").text(str2.concat(map1.vehicle_v_max.toFixed(2)));
-	str3 = "Arriving with acceleration ";
-	$("#acceleration_results").text(str3.concat((0).toFixed(2)));
 }
 
 function buildPathDynamic() {
@@ -315,16 +308,16 @@ function buildPathDynamic() {
 		ctx.font = "15px Arial";
 		//ctx.fillText("Traveling time: " + t, 10, 20);
 		str1 = "Path completed in ";
-		$("#time_results").text(str1.concat((time_max_a + total_time).toFixed(4)).concat(" s"));
+		$("#time_results").text(str1.concat((time_max_a + total_time).toFixed(4)));
 		str2 = "Arriving with velocity ";
-		$("#velocity_results").text(str2.concat(vel_max.toFixed(2)).concat(" units/s"));
+		$("#velocity_results").text(str2.concat(vel_max.toFixed(2)));
 		str3 = "Arriving with acceleration ";
-		$("#acceleration_results").text(str3.concat(acceleration.toFixed(2)).concat(" units/s2"));
+		$("#acceleration_results").text(str3.concat(acceleration.toFixed(2)));
 	}
 	ctx.restore();
 }
 
-function buildPathDD() {
+/* function buildPathDD() {
 	prev_point = vertices[start_vertex_ind];
 	drawMap();
 	ctx.save();	
@@ -352,27 +345,63 @@ function buildPathDD() {
 		str1 = "Path completed in ";
 		$("#time_results").text(str1.concat((total_time).toFixed(4)).concat(" s"));
 		str2 = "Arriving with velocity ";
-		$("#velocity_results").text(str2.concat(vel_max.toFixed(2)).concat(" units/s"));
+		$("#velocity_results").text(str2.concat(vel_max.toFixed(2)));
 		str3 = "Arriving with acceleration ";
-		$("#acceleration_results").text(str3.concat(acceleration.toFixed(2)).concat(" units/s2"));
+		$("#acceleration_results").text(str3.concat(acceleration.toFixed(2)));
 	}
 	ctx.restore();
+} */
+
+function buildPathDD() {
+	drawMap();
+	ctx.save();	
+	var shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
+	path = constructPath(shortestPathInfo, goal_vertex_ind);
+
+	//TODO: check for Nan
+	firstPoint = translatePoint(vertices[start_vertex_ind]);
+	ctx.lineWidth = 2;
+	ctx.strokeStyle = "#228B22";
+	ctx.moveTo(firstPoint[0], firstPoint[1]);
+	prev_point = vertices[start_vertex_ind];
+	t = 0;
+
+	for (var i = 0; i < path.length; i++) {
+		v = translatePoint(vertices[path[i]]);
+		ctx.lineTo(v[0], v[1]);
+		t += (dist(prev_point, vertices[path[i]]))/map.vehicle_v_max;
+		prev_point = vertices[i];
+	}
+
+	ctx.stroke();
+	ctx.font = "15px Arial";
+	//ctx.fillText("Traveling time: " + t, 10, 20);
+	ctx.restore();
+	str1 = "Path completed in ";
+	$("#time_results").text(str1.concat((t).toFixed(4)));
+	str2 = "Arriving with velocity ";
+	$("#velocity_results").text(str2.concat(map1.vehicle_v_max.toFixed(2)));
+	str3 = "Arriving with acceleration ";
+	$("#acceleration_results").text(str3.concat((0).toFixed(2)));
 }
 
 function buildPathKC() {
 	alert('Build path under kinematic car model');
 }
 
-function segmentsIntersect(p0, p1, p2, p3) {
-	p0_x=p0[0]; p0_y=p0[1]; p1_x=p1[0]; p1_y=p1[1]; p2_x=p2[0]; p2_y=p2[1]; p3_x=p3[0]; p3_y=p3[1];
-    s1_x = p1_x - p0_x;
-    s1_y = p1_y - p0_y;
-    s2_x = p3_x - p2_x;
-    s2_y = p3_y - p2_y;
-    s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
-    t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
-    return s >= 0 && s <= 1 && t >= 0 && t <= 1;
-}
+// https://stackoverflow.com/questions/9043805/test-if-two-lines-intersect-javascript-function
+// Returns true iff the line from (a,b)->(c,d) intersects with (p,q)->(r,s)
+function segmentsIntersect(a,b,c,d,p,q,r,s) {
+  var det, gamma, lambda;
+  det = (c - a) * (s - q) - (r - p) * (d - b);
+  if (det === 0) {
+    return false;
+  } else {
+    lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
+    gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
+    return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+  }
+};
 
 // Euclidian distance between two points
 function dist(p1, p2) {
@@ -431,11 +460,4 @@ function constructPath(shortestPathInfo, endVertex) {
 		endVertex = shortestPathInfo.predecessors[endVertex];
 	}
 	return path;
-}
-
-function sampleGaussian(mean, sd) {
-    u1 = Math.random();
-	u2 = Math.random();
-	z0 = Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);
-	return mean + z0*sd;
 }
