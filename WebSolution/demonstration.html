@@ -169,6 +169,7 @@
 	</script>
 	<script type="text/javascript" src="jquery.min.js"></script>
 	<script type="text/javascript" src="script.js"></script>
+	<script type="text/javascript" src="RRT-script.js"></script>
 </head>
 <body onload="init()">
 	<div style="margin: 0; padding: 10px;">
@@ -187,6 +188,7 @@
 			<button onclick="buildPathDynamic()">Dynamic Point</button>
 			<button onclick="buildPathDD()">Differential Drive</button>
 			<button onclick="buildPathKC()">Kinematic Car</button>
+			<button onclick="buildPathKinematicRRT()">Kinematic Point (RRT*)</button>
 			<div>
 				<div id="time_results" style="margin: 0; padding: 10px;"></div><br />
 				<!--<div id="velocity_results" style="margin: 0; padding: 10px;"></div><br />
