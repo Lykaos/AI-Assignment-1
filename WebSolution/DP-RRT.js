@@ -1,4 +1,5 @@
 var r = 1;
+var N = 1000;
 
 function buildPathDynamicRRT() {
 	drawMap();
@@ -23,7 +24,7 @@ function buildPathDynamicRRT() {
 
 function getPathDynamicRRT(N = 3577) {
 	
-	var NEIGHBORHOOD_RADIUS = 500;
+	var NEIGHBORHOOD_RADIUS = 200;
 	
 	mu_x_free = (max_x-min_x)*(max_y-min_y)*(map.vehicle_v_max*map.vehicle_v_max*0.5);
 	gamma = NEIGHBORHOOD_RADIUS*Math.pow(2,4)*(1 + 1/4)*mu_x_free;
@@ -149,7 +150,6 @@ function getPathDynamicRRT(N = 3577) {
 		path = [];
 		end_node = final_node;
 		while (end_node.parent_node != null) {
-			//console.log(end_node.state[0] + " " + end_node.state[1]);
 			path.unshift(end_node);
 			end_node = end_node.parent_node;
 		}
@@ -218,13 +218,13 @@ function checkFisibility(finalState, startState, tau) {
 	v_x1 = finalState.v_x;
 	v_y1 = finalState.v_y;
 	
-	d1Tau = 6*(p_x1-p_x0-v_x0*tau)/(tau*tau*tau) - 3*(v_x1-v_x0)/(tau*tau);
-	d2Tau = 6*(p_y1-p_y0-v_y0*tau)/(tau*tau*tau) - 3*(v_y1-v_y0)/(tau*tau);
-	d3Tau = (2/tau)*(v_x1-v_x0) - 3*(p_x1-p_x0-v_x0*tau)/(tau*tau);
-	d4Tau = (2/tau)*(v_y1-v_y0) - 3*(p_y1-p_y0-v_y0*tau)/(tau*tau);
+	d1Tau = 2*r*(6*(p_x1-p_x0-v_x0*tau)/(tau*tau*tau) - 3*(v_x1-v_x0)/(tau*tau));
+	d2Tau = 2*r*(6*(p_y1-p_y0-v_y0*tau)/(tau*tau*tau) - 3*(v_y1-v_y0)/(tau*tau));
+	d3Tau = 2*r*((2/tau)*(v_x1-v_x0) - 3*(p_x1-p_x0-v_x0*tau)/(tau*tau));
+	d4Tau = 2*r*((2/tau)*(v_y1-v_y0) - 3*(p_y1-p_y0-v_y0*tau)/(tau*tau));
 	
-	a_x_curr = 2*(d3Tau-(-tau)*d1Tau);
-	a_y_curr = 2*(d4Tau-(-tau)*d2Tau);
+	a_x_curr = (d3Tau-(1e-7-tau)*d1Tau)/r;
+	a_y_curr = (d4Tau-(1e-7-tau)*d2Tau)/r;
 	
 	if (Math.sqrt(a_x_curr*a_x_curr + a_y_curr*a_y_curr) > map.vehicle_a_max) {
 		return false;
@@ -236,9 +236,9 @@ function checkFisibility(finalState, startState, tau) {
 	v_prev_x = v_x0;
 	v_prev_y = v_y0;
 	
-	for (var t = dt; t <= tau; t+=dt) {
-		p_x_curr = p_x1 + v_x1*(t-tau) + Math.pow(t-tau,2)*d3Tau;
-		p_y_curr = p_y1 + v_y1*(t-tau) + Math.pow(t-tau,2)*d4Tau;
+	for (var t = dt; t < tau; t+=dt) {
+		p_x_curr = p_x1 + v_x1*(t-tau) + Math.pow(t-tau,2)*d3Tau/(2*r) - t*d1Tau*(t*t/3 - t*tau + tau*tau)/(2*r) + Math.pow(tau,3)*d1Tau/(6*r);
+		p_y_curr = p_y1 + v_y1*(t-tau) + Math.pow(t-tau,2)*d4Tau/(2*r) - t*d2Tau*(t*t/3 - t*tau + tau*tau)/(2*r) + Math.pow(tau,3)*d2Tau/(6*r);
 		
 		for (var k = 0; k < obst_edges.length; k++) {
 			if (segmentsIntersect(p_x_curr, p_y_curr,p_prev_x, p_prev_y, obst_edges[k][0][0], obst_edges[k][0][1], obst_edges[k][1][0], obst_edges[k][1][1])) {
@@ -246,8 +246,8 @@ function checkFisibility(finalState, startState, tau) {
 			}
 		}
 		
-		v_x_curr = v_x1 - Math.pow(t-tau,2)*d1Tau + 2*(t-tau)*(d3Tau);
-		v_y_curr = v_y1 - Math.pow(t-tau,2)*d2Tau + 2*(t-tau)*(d4Tau);
+		v_x_curr = v_x1 - Math.pow(t-tau,2)*d1Tau/(2*r) + (t-tau)*(d3Tau)/r;
+		v_y_curr = v_y1 - Math.pow(t-tau,2)*d2Tau/(2*r) + (t-tau)*(d4Tau)/r;
 		if (Math.sqrt(v_x_curr*v_x_curr + v_y_curr*v_y_curr) > map.vehicle_v_max) {
 			return false;
 		}
@@ -256,8 +256,8 @@ function checkFisibility(finalState, startState, tau) {
 			return false;
 		}
 		
-		a_x_curr = 2*(d3Tau-(t-tau-1e-7)*d1Tau);
-		a_y_curr = 2*(d4Tau-(t-tau-1e-7)*d2Tau);
+		a_x_curr = (d3Tau-(t-tau)*d1Tau)/r;
+		a_y_curr = (d4Tau-(t-tau)*d2Tau)/r;
 		
 		if (Math.sqrt(a_x_curr*a_x_curr + a_y_curr*a_y_curr) > map.vehicle_a_max) {
 			return false;
@@ -283,32 +283,42 @@ function drawPartPath(finalState, startState, tau) {
 	v_x1 = finalState.v_x;
 	v_y1 = finalState.v_y;
 	
-	d1Tau = 6*(p_x1-p_x0-v_x0*tau)/(tau*tau*tau) - 3*(v_x1-v_x0)/(tau*tau);
-	d2Tau = 6*(p_y1-p_y0-v_y0*tau)/(tau*tau*tau) - 3*(v_y1-v_y0)/(tau*tau);
-	d3Tau = (2/tau)*(v_x1-v_x0) - 3*(p_x1-p_x0-v_x0*tau)/(tau*tau);
-	d4Tau = (2/tau)*(v_y1-v_y0) - 3*(p_y1-p_y0-v_y0*tau)/(tau*tau);
+	d1Tau = 2*r*(6*(p_x1-p_x0-v_x0*tau)/(tau*tau*tau) - 3*(v_x1-v_x0)/(tau*tau));
+	d2Tau = 2*r*(6*(p_y1-p_y0-v_y0*tau)/(tau*tau*tau) - 3*(v_y1-v_y0)/(tau*tau));
+	d3Tau = 2*r*((2/tau)*(v_x1-v_x0) - 3*(p_x1-p_x0-v_x0*tau)/(tau*tau));
+	d4Tau = 2*r*((2/tau)*(v_y1-v_y0) - 3*(p_y1-p_y0-v_y0*tau)/(tau*tau));
 	
-	a_x_curr = 2*(d3Tau-(-tau)*d1Tau);
-	a_y_curr = 2*(d4Tau-(-tau)*d2Tau);
-	
-	console.log(Math.sqrt(a_x_curr*a_x_curr + a_y_curr*a_y_curr));
+	a_x_curr = (d3Tau-(1e-7-tau)*d1Tau)/r;
+	a_y_curr = (d4Tau-(1e-7-tau)*d2Tau)/r;
 	
 	p_prev_x = p_x0;
 	p_prev_y = p_y0;
 	
+	v_prev_x = v_x0;
+	v_prev_y = v_y0;
+	
 	ctx.beginPath();
 	vertNorm = translatePoint([p_prev_x, p_prev_y])
 	ctx.moveTo(vertNorm[0], vertNorm[1]);
-	for (var t = dt; t <= tau; t+=dt) {
-		p_x_curr = p_x1 + v_x1*(t-tau) + Math.pow(t-tau,2)*d3Tau;
-		p_y_curr = p_y1 + v_y1*(t-tau) + Math.pow(t-tau,2)*d4Tau;
+	
+	for (var t = dt; t < tau; t+=dt) {
+		p_x_curr = p_x1 + v_x1*(t-tau) + Math.pow(t-tau,2)*d3Tau/(2*r) - t*d1Tau*(t*t/3 - t*tau + tau*tau)/(2*r) + Math.pow(tau,3)*d1Tau/(6*r);
+		p_y_curr = p_y1 + v_y1*(t-tau) + Math.pow(t-tau,2)*d4Tau/(2*r) - t*d2Tau*(t*t/3 - t*tau + tau*tau)/(2*r) + Math.pow(tau,3)*d2Tau/(6*r);
 		
-		a_x_curr = 2*(d3Tau-(t-tau-1e-7)*d1Tau);
-		a_y_curr = 2*(d4Tau-(t-tau-1e-7)*d2Tau);
-		console.log(Math.sqrt(a_x_curr*a_x_curr + a_y_curr*a_y_curr));
+		v_x_curr = v_x1 - Math.pow(t-tau,2)*d1Tau/(2*r) + (t-tau)*(d3Tau)/r;
+		v_y_curr = v_y1 - Math.pow(t-tau,2)*d2Tau/(2*r) + (t-tau)*(d4Tau)/r;
+		
+		a_x_curr = (d3Tau-(t-tau)*d1Tau)/r;
+		a_y_curr = (d4Tau-(t-tau)*d2Tau)/r;
 		
 		p = translatePoint([p_x_curr, p_y_curr]);
 		ctx.lineTo(p[0], p[1]);
+		
+		p_prev_x = p_x_curr;
+		p_prev_y = p_y_curr;
+		v_prev_x = v_x_curr;
+		v_prev_y = v_y_curr;
 	}
+	
 	ctx.stroke();
 }
