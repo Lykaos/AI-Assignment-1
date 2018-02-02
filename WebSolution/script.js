@@ -64,36 +64,6 @@ function initMap(newMap) {
 			}
 			
 			v = [obstacles[i][j][0], obstacles[i][j][1]];
-			//nextInd = j % obstacles[i].length;
-			//next_obs_vert = obstacles[i][nextInd];
-			// Adding some margin to avoid collisions
-			//if (prev_obst_vert[0] > v[0]) {
-			//	v[0] -= eps;
-			//} else {
-			//	v[0] += eps;
-			//}
-			//if (prev_obst_vert[1] > v[1]) {
-			//	v[1] -= eps;
-			//} else {
-			//	v[1] += eps;
-			//}
-			
-			//if (next_obs_vert[0] > v[0]) {
-			//	v[0] -= eps;
-			//} else {
-			//	v[0] += eps;
-			//}
-			//if (next_obs_vert[1] > v[1]) {
-			//	v[1] -= eps;
-			//} else {
-			//	v[1] += eps;
-			//}
-
-			// ???
-			
-			/* for (var k = 0; k < 7; k++) {
-				vertices.push([v[0]+sampleGaussian(0, 1e-3), v[1]+sampleGaussian(0, 1e-3)]);
-			} */
 
 			vertices.push([v[0], v[1]]);
 			
@@ -242,20 +212,6 @@ function buildPathKinematic() {
 	var shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
 	path = constructPath(shortestPathInfo, goal_vertex_ind);
 
-	// What is this for?
-	for (var i = 0; i < 10 && path == undefined; i++) {
-		initMap(map);
-		shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
-		path = constructPath(shortestPathInfo, goal_vertex_ind);
-	} 
-	
-	// Won't happen
-	if (path == undefined) {
-		alert("No path found. Try again?")
-		return;
-	}
-	
-	//TODO: check for Nan
 	firstPoint = translatePoint(vertices[start_vertex_ind]);
 	ctx.lineWidth = 2;
 	ctx.strokeStyle = "#228B22";
@@ -279,110 +235,68 @@ function buildPathKinematic() {
 }
 
 function buildPathDynamic() {
-	prev_point = vertices[start_vertex_ind];
-	drawMap();
-	ctx.save();	
-	var shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
-	path = constructPath(shortestPathInfo, goal_vertex_ind);
-	firstPoint = translatePoint(vertices[start_vertex_ind]);
-	ctx.strokeStyle = "#228B22";
-	ctx.lineWidth = 2;
-	ctx.moveTo(firstPoint[0], firstPoint[1]);
-
-	// TODO: Implement this better when there is more than one node in the optimal path
-	if (path.length == 1) { // First week case
-		v = translatePoint(vertices[path[0]]);
-		ctx.lineTo(v[0], v[1]);
-		acceleration = map1.vehicle_a_max;
-		vel_max = map1.vehicle_v_max
-		time_max_a = vel_max / acceleration; // Time spent accelerating until max speed.
-		distance_while_accelerating = acceleration * Math.pow(time_max_a, 2) / 2; // Distance travelled while accelerating.		
-		total_distance = dist(vertices[vertices.length -1], prev_point);
-		remaining_distance = total_distance - distance_while_accelerating; // Distance travelled with max speed
-		if (remaining_distance > 0) {
-			acceleration = 0;
-		}
-		remaining_time = remaining_distance / vel_max;
-		total_time = time_max_a + remaining_time;
-		ctx.stroke();
-		ctx.font = "15px Arial";
-		//ctx.fillText("Traveling time: " + t, 10, 20);
-		str1 = "Path completed in ";
-		$("#time_results").text(str1.concat((time_max_a + total_time).toFixed(4)));
-		str2 = "Arriving with velocity ";
-		$("#velocity_results").text(str2.concat(vel_max.toFixed(2)));
-		str3 = "Arriving with acceleration ";
-		$("#acceleration_results").text(str3.concat(acceleration.toFixed(2)));
-	}
-	ctx.restore();
+	alert('In progress');
 }
-
-/* function buildPathDD() {
-	prev_point = vertices[start_vertex_ind];
-	drawMap();
-	ctx.save();	
-	var shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
-	path = constructPath(shortestPathInfo, goal_vertex_ind);
-	firstPoint = translatePoint(vertices[start_vertex_ind]);
-	ctx.strokeStyle = "#228B22";
-	ctx.moveTo(firstPoint[0], firstPoint[1]);
-	// TODO: Implement this better when there is more than one node in the optimal path
-	if (path.length == 1) { // First week case
-		v = translatePoint(vertices[path[0]]);
-		ctx.lineTo(v[0], v[1]);
-		vel_max = map1.vehicle_v_max;
-		acceleration = 0;
-		total_distance = dist(vertices[vertices.length -1], prev_point);
-		v1 = vertices[0];
-		v2 = vertices[vertices.length - 1];
-		radians_to_rotate = Math.atan(v2[1]-v1[1]/v2[0]/v1[0]);
-		rotation_time = radians_to_rotate / map1.vehicle_phi_max;
-		remaining_time = total_distance / vel_max;
-		total_time = rotation_time + remaining_time;
-		ctx.stroke();
-		ctx.font = "15px Arial";
-		//ctx.fillText("Traveling time: " + t, 10, 20);
-		str1 = "Path completed in ";
-		$("#time_results").text(str1.concat((total_time).toFixed(4)).concat(" s"));
-		str2 = "Arriving with velocity ";
-		$("#velocity_results").text(str2.concat(vel_max.toFixed(2)));
-		str3 = "Arriving with acceleration ";
-		$("#acceleration_results").text(str3.concat(acceleration.toFixed(2)));
-	}
-	ctx.restore();
-} */
 
 function buildPathDD() {
 	drawMap();
-	ctx.save();	
+	ctx.save();
 	var shortestPathInfo = shortestPath(adj_matrix, vertices.length, start_vertex_ind);
 	path = constructPath(shortestPathInfo, goal_vertex_ind);
 
-	//TODO: check for Nan
 	firstPoint = translatePoint(vertices[start_vertex_ind]);
 	ctx.lineWidth = 2;
 	ctx.strokeStyle = "#228B22";
 	ctx.moveTo(firstPoint[0], firstPoint[1]);
 	prev_point = vertices[start_vertex_ind];
 	t = 0;
+	vel = getModule(map.vel_start);
+    dir = map.vel_start
+	//x_1 = 0.5 * map.vehicle_a_max * Math.pow(t, 2);
+
 
 	for (var i = 0; i < path.length; i++) {
-		v = translatePoint(vertices[path[i]]);
-		ctx.lineTo(v[0], v[1]);
-		t += (dist(prev_point, vertices[path[i]]))/map.vehicle_v_max;
-		prev_point = vertices[i];
+		radius = vel / map.vehicle_omega_max;
+		goal = vertices[path[i]];
+
+		if (i == path.length - 1) {
+			vel = getModule(map.vel_goal);
+	    	radius = vel / map.vehicle_omega_max;
+			[center_circle_goal, turn_goal] = FindNearestCenter(vertices[path[path.length - 1]], map.vel_goal, prev_point, radius);
+			tangent_points_goal = FindTangentPoints(center_circle_goal, [prev_point[0] - center_circle_goal[0], prev_point[1] - center_circle_goal[1]], prev_point, radius);
+			if (turn_goal == 0) {
+				goal = tangent_points_goal[0];
+			}
+			else {
+				goal = tangent_points_goal[1];
+			}
+		}
+
+		[center_circle, turn] = FindNearestCenter(prev_point, dir, goal, radius);
+		tangent_points = FindTangentPoints(center_circle, [goal[0] - center_circle[0], goal[1] - center_circle[1]], goal, radius);
+
+		drawArc(center_circle, turn, tangent_points, prev_point, radius, false);
+
+	    v = translatePoint(goal);
+	    ctx.lineTo(v[0], v[1]);
+	    t += dist(tangent_point, goal) / map.vehicle_v_max;
+
+	    dir = [goal[0] - tangent_point[0], goal[1] - tangent_point[1]];
+	    vel = map.vehicle_v_max / 2;
+	    if (i == path.length-1) {
+	    	goal = vertices[path[i]];
+	    	drawArc(center_circle_goal, turn_goal, tangent_points_goal, goal, radius, true);
+	    }
+
+	    prev_point = goal;
 	}
 
 	ctx.stroke();
 	ctx.font = "15px Arial";
 	//ctx.fillText("Traveling time: " + t, 10, 20);
 	ctx.restore();
-	str1 = "Path completed in ";
-	$("#time_results").text(str1.concat((t).toFixed(4)));
-	str2 = "Arriving with velocity ";
-	$("#velocity_results").text(str2.concat(map1.vehicle_v_max.toFixed(2)));
-	str3 = "Arriving with acceleration ";
-	$("#acceleration_results").text(str3.concat((0).toFixed(2)));
+	printResults(t, 0, 0);
+
 }
 
 function buildPathKC() {
