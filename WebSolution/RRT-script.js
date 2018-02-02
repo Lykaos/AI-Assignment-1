@@ -19,7 +19,6 @@ function buildPathKinematicRRT() {
 	}
 	ctx.stroke();
 	ctx.font = "15px Arial";
-	//ctx.fillText("Traveling time: " + t, 10, 20);
 	ctx.restore();
 	str1 = "Time: ";
 	$("#time_results").text(str1.concat((total_dist/map.vehicle_v_max).toFixed(4)));
@@ -27,11 +26,11 @@ function buildPathKinematicRRT() {
 	ctx.restore();
 }
 
-function getPathRRT(pos_start, pos_goal, obstacles, bound_polygon, N = 1000) {
+function getPathRRT(pos_start, pos_goal, obstacles, bound_polygon, N = 1500) {
 	
 	var GOAL_SAMPLE_PROBABILITY = 0.1;
 	//var MAX_STEP_LENGTH = 10;
-	var NEIGHBORHOOD_RADIUS = 30;
+	var NEIGHBORHOOD_RADIUS = 20;
 	var tree = [ { point: pos_start, parent_node: null, path_length: 0 } ];
 	
 	final_node = null;
