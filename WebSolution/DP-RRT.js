@@ -1,7 +1,8 @@
 var r = 1;
-var N = 3000;
-var sigma1 = 1;
-var sigma2 = 0.5;
+var N = 100000;
+var sigma1 = 3;
+var sigma2 = 0.25;
+var max_comp_time_sec = 5;
 
 async function buildPathDynamicRRT() {
 	drawMap();
@@ -27,7 +28,9 @@ async function buildPathDynamicRRT() {
 
 function getPathDynamicRRT() {
 	
-	var NEIGHBORHOOD_RADIUS = 200;
+	var startTime = Date.now();
+	
+	var NEIGHBORHOOD_RADIUS = 300;
 	
 	mu_x_free = (max_x-min_x)*(max_y-min_y)*(map.vehicle_v_max*map.vehicle_v_max*0.5);
 	gamma = NEIGHBORHOOD_RADIUS*Math.pow(2,4)*(1 + 1/4)*mu_x_free;
@@ -44,7 +47,11 @@ function getPathDynamicRRT() {
 	
 	for (var iter = 0; iter < N; iter++) {
 		
-		threshold = Math.pow((gamma/unit_sphere)*Math.log(tree.length+1)/(tree.length+1), 1/4);
+		if (final_node.parent_node != null && (Date.now() - startTime) > max_comp_time_sec*1000) {
+			break;
+		}
+		
+		threshold = 1.5*Math.pow((gamma/unit_sphere)*Math.log(tree.length+1)/(tree.length+1), 1/4);
 		
 		if (iter % 100 == 0) {
 			console.log(iter);
@@ -56,7 +63,7 @@ function getPathDynamicRRT() {
 		// Sample a random free point
 		var p;
 		freePoint = false;
-		if (final_node.parent_node == null) {
+		if (final_node.parent_node == null || Math.random()<0.3) {
 			while (!freePoint) {
 				
 				p = [(Math.random()*(max_x-min_x)+min_x), (Math.random()*(max_y-min_y)+min_y)];
@@ -87,7 +94,9 @@ function getPathDynamicRRT() {
 			node = final_node;
 			for (var i = 0; i < index; i++) {
 				if (node.parent_node == null) {
-					break;
+					node = final_node;
+					i = (index-i)
+					continue;
 				}
 				node = node.parent_node;
 			}
@@ -129,8 +138,8 @@ function getPathDynamicRRT() {
 		best_tau = 0;
 		for (var i = 0; i < tree.length; i++) {
 			node = tree[i];
-			cost = getOptimalTau(q_rand, node.state, 1.5*threshold);
-			if (isNaN(cost) || cost <= dt) {
+			cost = getOptimalTau(q_rand, node.state, Math.min(100,20+threshold));
+			if (isNaN(cost) || cost <= 1e-3) {
 				continue;
 			}
 			
@@ -162,14 +171,14 @@ function getPathDynamicRRT() {
 		
 		for (var i = 0; i < neighbors.length; i++) {
 			
-			cost = getOptimalTau(neighbors[i].state, q_rand, 1.5*threshold);
-			if (!isNaN(cost) && cost > dt) {
+			cost = getOptimalTau(neighbors[i].state, q_rand, Math.min(100,20+threshold));
+			if (!isNaN(cost) && cost > 1e-3) {
 				if (best_cost + cost < neighbors[i].path_cost) {
 					tau = cost;
 					if (checkFisibility(neighbors[i].state, q_rand, tau)) {
 						neighbors[i].parent_node = new_node;
 						neighbors[i].path_cost = best_cost + cost;
-						oldDepth = neighbors[i].depth;
+						//oldDepth = neighbors[i].depth;
 						neighbors[i].depth = new_node.depth+1;
 						neighbors[i].tau = cost;
 					}
@@ -178,8 +187,8 @@ function getPathDynamicRRT() {
 		}
 		
 		// final_node
-		cost = getOptimalTau(final_node.state, q_rand, 1.5*threshold);
-		if (!isNaN(cost) && cost > dt) {
+		cost = getOptimalTau(final_node.state, q_rand, Math.min(100,20+threshold));
+		if (!isNaN(cost) && cost > 1e-3) {
 			if (best_cost + cost < final_node.path_cost) {
 				tau = cost;
 				if (checkFisibility(final_node.state, q_rand, tau)) {
@@ -278,6 +287,12 @@ function checkFisibility(finalState, startState, tau) {
 		return false;
 	}
 	
+	v_x_curr = v_x1 - Math.pow(1e-7-tau,2)*d1Tau/(2*r) + (1e-7-tau)*(d3Tau)/r;
+	v_y_curr = v_y1 - Math.pow(1e-7-tau,2)*d2Tau/(2*r) + (1e-7-tau)*(d4Tau)/r;
+	if (Math.sqrt(v_x_curr*v_x_curr + v_y_curr*v_y_curr) > map.vehicle_v_max){
+		return false;
+	}
+	
 	p_prev_x = p_x0;
 	p_prev_y = p_y0;
 	
@@ -315,6 +330,12 @@ function checkFisibility(finalState, startState, tau) {
 		p_prev_y = p_y_curr;
 		//v_prev_x = v_x_curr;
 		//v_prev_y = v_y_curr;
+	}
+	
+	v_x_curr = v_x1 - Math.pow(-1e-3,2)*d1Tau/(2*r) + (-1e-3)*(d3Tau)/r;
+	v_y_curr = v_y1 - Math.pow(-1e-3,2)*d2Tau/(2*r) + (-1e-3)*(d4Tau)/r;
+	if (Math.sqrt(v_x_curr*v_x_curr + v_y_curr*v_y_curr) > map.vehicle_v_max){
+		return false;
 	}
 	
 	t_crit = (d3Tau+d1Tau*tau+d4Tau+d2Tau*tau)/(d1Tau+d2Tau);
