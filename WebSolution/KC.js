@@ -102,7 +102,7 @@ function getPathKC_RRT() {
 			// Check neighborhood
 			if (partPath != null && partPath.cost < NEIGHBORHOOD_RADIUS) {
 				
-				if (!checkFisibility(partPath.path)) {
+				if (!checkFisibilityCar(partPath.path)) {
 					continue;
 				}
 				
@@ -129,7 +129,7 @@ function getPathKC_RRT() {
 		partPath = getPartPath(q_rand, final_node.state, minRadius);
 		if (partPath != null) {
 			if (best_cost + partPath.cost < final_node.path_cost) {
-				if (checkFisibility(partPath.path)) {
+				if (checkFisibilityCar(partPath.path)) {
 					final_node.parent_node = new_node;
 					final_node.path_cost = best_cost + partPath.cost;
 					final_node.part_path = partPath;
@@ -370,7 +370,7 @@ function getPartPath(startState, finalState, radius) {
 	return null;
 }
 
-function checkFisibility(path) {
+function checkFisibilityCar(path) {
 	p_prev_x = path[0][0];
 	p_prev_y = path[0][1];
 	
