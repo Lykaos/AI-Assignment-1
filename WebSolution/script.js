@@ -32,10 +32,6 @@ function buildPathKinematic() {
 	drawResults();
 }
 
-function buildPathDynamic() {
-	alert('In progress');
-}
-
 function buildPathDD() {
 
 	setInitialVariables();
@@ -44,9 +40,9 @@ function buildPathDD() {
 		radius = vel / map.vehicle_omega_max;
 		goal = vertices[path[i]];
 
-		// If it's the goal, find the best tangent to the circunference centered on it and make it the new goal
+		// If it's the goal, find the best tangent to the circunference centered on it and make it a temporary goal
 		if (i == path.length - 1) {
-			findTangentPointInGoal();
+			findTangentPointInGoal(false);
 		}
 
 		// We need to change our orientation for the next node, so we find a tangent point in the turning circunference
@@ -66,5 +62,23 @@ function buildPathDD() {
 }
 
 function buildPathKC() {
-	alert('Build path under kinematic car model');
+
+	setInitialVariables();
+
+	for (var i = 0; i < path.length; i++) {
+		radius = map.vehicle_L / Math.tan(map.vehicle_phi_max);
+		goal = vertices[path[i]];
+
+		if (i < path.length - 1) {
+			drawNextPath()
+			setVariablesForNextNode();
+		}
+
+
+		// If it's the goal, find the best tangent to the circunference centered on it and make it a temporary goal
+		else {
+			findTangentPointInGoalKC();
+		}
+	}
+	drawResults();
 }

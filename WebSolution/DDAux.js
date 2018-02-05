@@ -28,10 +28,16 @@ function drawArc(center_circle, turn, tangent_points, prev_point, radius, invers
     if (turn == 0) {
     	if ((startAngle - endAngle1 < 0 && startAngle - endAngle2 < 0) || (startAngle - endAngle1 > 0 && startAngle - endAngle2 > 0)) {
     		endAngle = Math.max(endAngle1, endAngle2);
+            if (inverse) {
+                endAngle = Math.min(endAngle1, endAngle2);
+            }
     		tangent_point = tangent_points[0];
     	}
     	else {
     		endAngle = Math.min(endAngle1, endAngle2);
+            if (inverse) {
+                endAngle = Math.max(endAngle1, endAngle2);
+            }
     		tangent_point = tangent_points[1];
     	}
     }
@@ -53,6 +59,7 @@ function drawArc(center_circle, turn, tangent_points, prev_point, radius, invers
     		tangent_point = tangent_points[0];
     	}
     }
+
 
     v = translatePoint(center_circle);
     canvas_factor = translatePoint([2, 0])[0] - translatePoint([1, 0])[0];
@@ -102,6 +109,7 @@ function findNearestCenter(point, vel, goal, radius) {
     else {
         return [center_2, 1]; // Turn right
     }
+
 }
 
 function findTangentPoints(point, vel, goal, radius) {
@@ -112,9 +120,80 @@ function findTangentPoints(point, vel, goal, radius) {
     return [center_1, center_2];
 }
 
-function findTangentPointInGoal() {
+function findTangentPointsKC(point, goal, radius) {
+    x0 = point[0];
+    x1 = goal[0];
+    y0 = point[1];
+    y1 = goal[1];
+    r0 = radius;
+
+    dist_points = dist(point, goal);
+    dist_tangent = Math.sqrt(Math.pow(dist_points, 2) - Math.pow(radius, 2));
+
+    r1 = dist_tangent;
+
+    var a, dx, dy, d, h, rx, ry;
+    var x2, y2;
+
+    /* dx and dy are the vertical and horizontal distances between
+     * the circle centers.
+     */
+    dx = x1 - x0;
+    dy = y1 - y0;
+
+    /* Determine the straight-line distance between the centers. */
+    d = Math.sqrt((dy*dy) + (dx*dx));
+
+    /* Check for solvability. */
+    if (d > (r0 + r1)) {
+        /* no solution. circles do not intersect. */
+        return false;
+    }
+    if (d < Math.abs(r0 - r1)) {
+        /* no solution. one circle is contained in the other */
+        return false;
+    }
+
+    /* 'point 2' is the point where the line through the circle
+     * intersection points crosses the line between the circle
+     * centers.  
+     */
+
+    /* Determine the distance from point 0 to point 2. */
+    a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
+
+    /* Determine the coordinates of point 2. */
+    x2 = x0 + (dx * a/d);
+    y2 = y0 + (dy * a/d);
+
+    /* Determine the distance from point 2 to either of the
+     * intersection points.
+     */
+    h = Math.sqrt((r0*r0) - (a*a));
+
+    /* Now determine the offsets of the intersection points from
+     * point 2.
+     */
+    rx = -dy * (h/d);
+    ry = dx * (h/d);
+
+    /* Determine the absolute intersection points. */
+    var xi = x2 + rx;
+    var xi_prime = x2 - rx;
+    var yi = y2 + ry;
+    var yi_prime = y2 - ry;
+
+    return [[xi, yi], [xi_prime, yi_prime]];
+}
+
+function findTangentPointInGoal(kcar) {
     vel = getModule(map.vel_goal);
-    radius = vel / map.vehicle_omega_max;
+    if (!kcar) {
+        radius = vel / map.vehicle_omega_max;
+    }
+    else {
+        radius = map.vehicle_L / Math.tan(map.vehicle_phi_max);
+    }
     [center_circle_goal, turn_goal] = findNearestCenter(vertices[path[path.length - 1]], map.vel_goal, prev_point, radius);
     tangent_points_goal = findTangentPoints(center_circle_goal, [prev_point[0] - center_circle_goal[0], prev_point[1] - center_circle_goal[1]], prev_point, radius);
     if (turn_goal == 0) {
@@ -166,10 +245,35 @@ function setPath() {
 
 function setVariablesForNextNode() {
     dir = [goal[0] - tangent_point[0], goal[1] - tangent_point[1]];
-    vel = map.vehicle_v_max / 2;
+    vel = map.vehicle_v_max / 4;
 }
 
 function turnToGoal() {
     goal = vertices[path[path.length - 1]];
     drawArc(center_circle_goal, turn_goal, tangent_points_goal, goal, radius, true);
+}
+
+function findTangentPointInGoalKC() {
+    [center_circle_prev, turn_prev] = findNearestCenter(prev_point, dir, goal, radius);
+    [center_circle_goal, turn_goal] = findNearestCenter(vertices[path[path.length - 1]], map.vel_goal, prev_point, radius);
+    tangent_points_prev = findTangentPointsKC(center_circle_prev, goal, radius);
+    drawArc(center_circle_prev, turn_prev, tangent_points_prev, prev_point, radius, false);
+    t1 = tangent_point;
+    tangent_points_goal = findTangentPointsKC(center_circle_goal, tangent_point, radius);
+    drawArc(center_circle_goal, turn_goal, tangent_points_goal, goal, radius, true);
+    t2 = tangent_point;
+
+    v = translatePoint(goal);
+    ctx.lineTo(v[0], v[1]);
+    t += dist(t1, t2) / vel;
+
+}
+
+function drawNextPath() {
+    [center_circle, turn] = findNearestCenter(prev_point, dir, goal, radius);
+    tangent_points = findTangentPointsKC(center_circle, goal, radius);
+    drawArc(center_circle, turn, tangent_points, prev_point, radius, false);
+    v = translatePoint(goal);
+    ctx.lineTo(v[0], v[1]);
+    prev_point = goal;
 }
