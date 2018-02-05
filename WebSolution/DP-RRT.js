@@ -7,7 +7,7 @@ var max_comp_time_sec = 5;
 async function buildPathDynamicRRT() {
 	drawMap();
 	ctx.save();
-	
+	ctx.fillStyle = "green";
 	// map.pos_start, map.pos_goal, map.vel_start, map.vel_goal, map.vehicle_v_max, map.vehicle_a_max, map.vehicle_dt
 	path = getPathDynamicRRT();
 	//path = pathInfo;
@@ -386,7 +386,7 @@ async function drawPartPath(finalState, startState, tau) {
 	//ctx.moveTo(vertNorm[0], vertNorm[1]);	
 	//ctx.stroke();
 	
-	ctx.fillRect(vertNorm[0], vertNorm[1], 1, 1);
+	ctx.fillRect(vertNorm[0], vertNorm[1], 2, 2);
 	await sleep(10);
 	
 	//await sleep(10);
@@ -410,7 +410,7 @@ async function drawPartPath(finalState, startState, tau) {
 		//ctx.lineTo(p[0], p[1]);
 		//ctx.stroke();
 		
-		ctx.fillRect(p[0], p[1], 1, 1);
+		ctx.fillRect(p[0], p[1], 2, 2);
 		
 		await sleep(7);
 		
