@@ -8,6 +8,7 @@ function calculatePathToNodeKP(i) {
 function calculatePathToNodeDD() {
     v = translatePoint(goal);
     ctx.lineTo(v[0], v[1]);
+    total_dist += dist(tangent_point, goal);
     t += dist(tangent_point, goal) / map.vehicle_v_max;
 }
 
@@ -81,15 +82,16 @@ function drawArc(center_circle, turn, tangent_points, prev_point, radius, invers
         }
     }
     dist_arc = radius * (Math.abs(endAngle - startAngle));
+    total_dist += dist_arc;
     t += dist_arc / vel;
 }
 
-function drawResults() {
+function drawResults(time) {
     ctx.stroke();
     ctx.font = "15px Arial";
     //ctx.fillText("Traveling time: " + t, 10, 20);
     ctx.restore();
-    printResults(t, 0, 0);
+    printResults(time, 0, 0);
 }
 
 function faceNewNode() {
@@ -120,6 +122,7 @@ function findTangentPoints(point, vel, goal, radius) {
     return [center_1, center_2];
 }
 
+// https://stackoverflow.com/a/12221389
 function findTangentPointsKC(point, goal, radius) {
     x0 = point[0];
     x1 = goal[0];
@@ -224,9 +227,11 @@ function scaleVector(vector, factor) {
 function setInitialVariables() {
     path = setPath();
     prev_point = vertices[start_vertex_ind];
-    t = 0; // Time to complete the path
+    t = 0; // Time to complete the path (DD)
     vel = getModule(map.vel_start); // Current velocity module
     dir = map.vel_start // Current direction vector
+    total_dist = 0; // Distance travelled so far
+    timeKC = 0; // Time to complete the path (KC)
 }
 
 function setPath() {
@@ -245,7 +250,7 @@ function setPath() {
 
 function setVariablesForNextNode() {
     dir = [goal[0] - tangent_point[0], goal[1] - tangent_point[1]];
-    vel = map.vehicle_v_max / 4;
+    vel = map.vehicle_v_max;
 }
 
 function turnToGoal() {
@@ -265,8 +270,7 @@ function findTangentPointInGoalKC() {
 
     v = translatePoint(goal);
     ctx.lineTo(v[0], v[1]);
-    t += dist(t1, t2) / vel;
-
+    total_dist += dist(t1, t2);
 }
 
 function drawNextPath() {
@@ -275,5 +279,6 @@ function drawNextPath() {
     drawArc(center_circle, turn, tangent_points, prev_point, radius, false);
     v = translatePoint(goal);
     ctx.lineTo(v[0], v[1]);
+    total_dist += dist(tangent_point, goal);
     prev_point = goal;
 }

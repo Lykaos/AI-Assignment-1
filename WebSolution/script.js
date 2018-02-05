@@ -29,7 +29,7 @@ function buildPathKinematic() {
 	for (var i = 0; i < path.length; i++) {
 		calculatePathToNodeKP(i);
 	}
-	drawResults();
+	drawResults(t);
 }
 
 function buildPathDD() {
@@ -58,7 +58,7 @@ function buildPathDD() {
 	    }
 	    prev_point = goal;
 	}
-	drawResults();
+	drawResults(t);
 }
 
 function buildPathKC() {
@@ -70,6 +70,9 @@ function buildPathKC() {
 		goal = vertices[path[i]];
 
 		if (i < path.length - 1) {
+			if (dist(prev_point, goal) < 2*radius) {
+				continue;
+			}
 			drawNextPath()
 			setVariablesForNextNode();
 		}
@@ -80,5 +83,17 @@ function buildPathKC() {
 			findTangentPointInGoalKC();
 		}
 	}
-	drawResults();
+	time_acceleration = (map.vehicle_v_max - getModule(map.vel_start)) / map.vehicle_a_max;
+	time_decceleration = (map.vehicle_v_max - getModule(map.vel_goal)) / map.vehicle_a_max;
+	distance_acceleration = getModule(map.vel_start) * time_acceleration + 0.5 * map.vehicle_a_max * Math.pow(time_acceleration, 2);
+	distance_decceleration = map.vehicle_v_max * time_decceleration - 0.5 * map.vehicle_a_max * Math.pow(time_decceleration, 2);
+	if (distance_decceleration + distance_acceleration < total_dist) {
+		timeKC = ((total_dist - distance_acceleration - distance_decceleration) / map.vehicle_v_max) + time_acceleration + time_decceleration;
+	}
+	else {
+		time_acceleration = Math.abs(getModule(map.vel_goal) - getModule(map.vel_start)) / map.vehicle_a_max;
+		distance_acceleration = getModule(map.vel_start) * time_acceleration + 0.5 * map.vehicle_a_max * Math.pow(time_acceleration, 2);
+		timeKC = ((total_dist - distance_acceleration) / getModule(map.vel_goal)) + time_acceleration; 	
+	}
+	drawResults(timeKC);
 }
