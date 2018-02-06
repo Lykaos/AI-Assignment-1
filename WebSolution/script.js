@@ -64,6 +64,13 @@ function buildPathDD() {
 function buildPathKC() {
 
 	setInitialVariables();
+	radius = map.vehicle_L / Math.tan(map.vehicle_phi_max);
+
+	if (dist(map.pos_start, map.pos_goal) < 4*radius) {
+		path.unshift(10);
+	}
+
+	console.log(path);
 
 	for (var i = 0; i < path.length; i++) {
 		radius = map.vehicle_L / Math.tan(map.vehicle_phi_max);
@@ -71,6 +78,7 @@ function buildPathKC() {
 
 		if (i < path.length - 1) {
 			if (dist(prev_point, goal) < 2*radius) {
+				console.log("hi");
 				continue;
 			}
 			drawNextPath()
