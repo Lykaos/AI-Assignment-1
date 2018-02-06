@@ -250,7 +250,7 @@ function setPath() {
 
 function setVariablesForNextNode() {
     dir = [goal[0] - tangent_point[0], goal[1] - tangent_point[1]];
-    vel = map.vehicle_v_max;
+    vel = map.vehicle_v_max / 1.2;
 }
 
 function turnToGoal() {
