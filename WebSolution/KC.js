@@ -12,17 +12,18 @@ function buildPathKinematicCar() {
 	ctx.strokeStyle = "#228B22";
 	ctx.moveTo(firstPoint[0], firstPoint[1]);
 	prev_point = map.pos_start;
-	
+	totalTimeTravel = 0;
 	for (var i = 0; i < path.length; i++) {
 		v = translatePoint(path[i]);
 		ctx.lineTo(v[0], v[1]);
-		prev_point = path[i];		
+		totalTimeTravel	+= dist(prev_point, path[i])/map.vehicle_v_max;
+		prev_point = path[i];	
 	}
 	ctx.stroke();
 	ctx.font = "15px Arial";
 	ctx.restore();
 	str1 = "Time: ";
-	$("#time_results").text(str1.concat((pathInfo[1]).toFixed(4)));
+	$("#time_results").text(str1.concat((totalTimeTravel).toFixed(4)));
 	
 	ctx.restore();
 }
